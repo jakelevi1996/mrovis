@@ -157,6 +157,7 @@ class C(D,F): pass
 class B(E,D): pass
 class A(B,C): pass
 
+displayer.set_sep("")
 linearise(A)
 
 # L(A) = A + merge(L(B), L(C), BC)
