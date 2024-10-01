@@ -148,3 +148,6 @@ linearise(A)
 # L(A) = A + B + C + D + E + merge(O, FO)
 # L(A) = A + B + C + D + E + F + merge(O, O)
 # L(A) = A + B + C + D + E + F + O
+
+for c in [A, B, C, D, E, F]:
+    assert tuple(linearise(c)) == c.__mro__
