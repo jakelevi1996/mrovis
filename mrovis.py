@@ -4,18 +4,18 @@ class _Displayer:
     def __init__(self):
         self.set_indent("|   ")
         self.set_sep("+")
-        self.set_sep(" + ", long=True)
+        self.set_long_sep(" + ")
         self._lin_stack: list[str] = []
         self._merge_stack: list[list[type]] = []
 
     def set_indent(self, indent_str: str):
         self._indent_str = indent_str
 
-    def set_sep(self, sep: str, long=False):
-        if long:
-            self._long_sep = sep
-        else:
-            self._short_sep = sep
+    def set_sep(self, sep: str):
+        self._short_sep = sep
+
+    def set_long_sep(self, long_sep: str):
+        self._long_sep = long_sep
 
     def get_arg_str(self, *c_lists: list[type], long=False):
         sep = self._long_sep if long else self._short_sep
@@ -43,9 +43,9 @@ class _Displayer:
         self._merge_stack.append([c])
         print(call_str, expr_str)
 
-    def pop_linearise(self, *c_lists: list[type]):
+    def pop_linearise(self, c_list: list[type]):
         call_str = self._lin_stack.pop()
-        arg_str = self.get_arg_str(*c_lists, long=True)
+        arg_str = self.get_arg_str(c_list, long=True)
         self._merge_stack.pop()
         print(call_str, arg_str)
 
@@ -107,10 +107,9 @@ def merge(*c_lists: list[type]) -> list[type]:
     displayer.push_merge(head)
     return [head] + merge(*pruned_c_lists)
 
-O = object
-class F(O): pass
-class E(O): pass
-class D(O): pass
+class F: pass
+class E: pass
+class D: pass
 class C(D,F): pass
 class B(D,E): pass
 # class B(E,D): pass
