@@ -1,14 +1,26 @@
 """ See https://docs.python.org/3/howto/mro.html """
 
-class Displayer:
+class _Displayer:
     def __init__(self):
-        self._indent_str = "|   "
+        self.set_indent("|   ")
+        self.set_sep("+")
+        self.set_sep(" + ", long=True)
         self._lin_stack: list[str] = []
         self._merge_stack: list[list[type]] = []
 
-    def get_arg_str(self, *c_lists: list[type], inner_sep=""):
+    def set_indent(self, indent_str: str):
+        self._indent_str = indent_str
+
+    def set_sep(self, sep: str, long=False):
+        if long:
+            self._long_sep = sep
+        else:
+            self._short_sep = sep
+
+    def get_arg_str(self, *c_lists: list[type], long=False):
+        sep = self._long_sep if long else self._short_sep
         return ", ".join(
-            inner_sep.join(
+            sep.join(
                 c.__name__.replace("object", "O")
                 for c in c_list
             )
@@ -33,12 +45,12 @@ class Displayer:
 
     def pop_linearise(self, *c_lists: list[type]):
         call_str = self._lin_stack.pop()
-        arg_str = self.get_arg_str(*c_lists)
+        arg_str = self.get_arg_str(*c_lists, long=True)
         self._merge_stack.pop()
         print(call_str, arg_str)
 
     def display_merge(self, *c_lists: list[type]):
-        merged_str = self.get_arg_str(self._merge_stack[-1], inner_sep=" + ")
+        merged_str = self.get_arg_str(self._merge_stack[-1], long=True)
         arg_str = self.get_arg_str(*c_lists)
         call_str = "%s + merge(%s)" % (merged_str, arg_str)
         print(self._lin_stack[-1], call_str)
@@ -46,7 +58,7 @@ class Displayer:
     def push_merge(self, head: type):
         self._merge_stack[-1].append(head)
 
-displayer = Displayer()
+displayer = _Displayer()
 
 def linearise(c: type) -> list[type]:
     if len(c.__bases__) == 0:
@@ -104,35 +116,36 @@ class B(D,E): pass
 # class B(E,D): pass
 class A(B,C): pass
 
+displayer.set_sep("")
 linearise(A)
 
 # L(A) = A + merge(L(B), L(C), BC)
 # |   L(B) = B + merge(L(D), L(E), DE)
 # |   |   L(D) = D + merge(L(O), O)
 # |   |   L(D) = D + merge(O, O)
-# |   |   L(D) = DO
+# |   |   L(D) = D + O
 # |   |   L(E) = E + merge(L(O), O)
 # |   |   L(E) = E + merge(O, O)
-# |   |   L(E) = EO
+# |   |   L(E) = E + O
 # |   L(B) = B + merge(DO, EO, DE)
 # |   L(B) = B + D + merge(O, EO, E)
 # |   L(B) = B + D + E + merge(O, O)
-# |   L(B) = BDEO
+# |   L(B) = B + D + E + O
 # |   L(C) = C + merge(L(D), L(F), DF)
 # |   |   L(D) = D + merge(L(O), O)
 # |   |   L(D) = D + merge(O, O)
-# |   |   L(D) = DO
+# |   |   L(D) = D + O
 # |   |   L(F) = F + merge(L(O), O)
 # |   |   L(F) = F + merge(O, O)
-# |   |   L(F) = FO
+# |   |   L(F) = F + O
 # |   L(C) = C + merge(DO, FO, DF)
 # |   L(C) = C + D + merge(O, FO, F)
 # |   L(C) = C + D + F + merge(O, O)
-# |   L(C) = CDFO
+# |   L(C) = C + D + F + O
 # L(A) = A + merge(BDEO, CDFO, BC)
 # L(A) = A + B + merge(DEO, CDFO, C)
 # L(A) = A + B + C + merge(DEO, DFO)
 # L(A) = A + B + C + D + merge(EO, FO)
 # L(A) = A + B + C + D + E + merge(O, FO)
 # L(A) = A + B + C + D + E + F + merge(O, O)
-# L(A) = ABCDEFO
+# L(A) = A + B + C + D + E + F + O
