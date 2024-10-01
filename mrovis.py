@@ -2,48 +2,71 @@
 
 class Displayer:
     def __init__(self):
-        self._indent_str = "| "
-        self._stack = []
+        self._indent_str = "|   "
+        self._lin_stack: list[str] = []
+        self._merge_stack: list[list[type]] = []
 
-    def get_arg_str(self, *c_lists: list[type]):
+    def get_arg_str(self, *c_lists: list[type], inner_sep=""):
         return ", ".join(
-            "".join(
+            inner_sep.join(
                 c.__name__.replace("object", "O")
                 for c in c_list
             )
             for c_list in c_lists
         )
 
-    def push(self, function_name, *c_lists: list[type]):
-        indent = self._indent_str * len(self._stack)
-        arg_str = self.get_arg_str(*c_lists)
-        call_str = "%s%s(%s) =" % (indent, function_name, arg_str)
-        self._stack.append(call_str)
-        print(call_str, "...")
+    def push_linearise(self, c: type):
+        indent = self._indent_str * len(self._lin_stack)
+        c_str = c.__name__.replace("object", "O")
+        call_str = "%sL(%s) =" % (indent, c_str)
+        merge_args = [
+            *[
+                "L(%s)" % b.__name__.replace("object", "O")
+                for b in c.__bases__
+            ],
+            self.get_arg_str(c.__bases__),
+        ]
+        expr_str = "%s + merge(%s)" % (c_str, ", ".join(merge_args))
+        self._lin_stack.append(call_str)
+        self._merge_stack.append([c])
+        print(call_str, expr_str)
 
-    def pop(self, *c_lists: list[type]):
+    def pop_linearise(self, *c_lists: list[type]):
+        call_str = self._lin_stack.pop()
         arg_str = self.get_arg_str(*c_lists)
-        call_str = self._stack.pop()
+        self._merge_stack.pop()
         print(call_str, arg_str)
+
+    def display_merge(self, *c_lists: list[type]):
+        merged_str = self.get_arg_str(self._merge_stack[-1], inner_sep=" + ")
+        arg_str = self.get_arg_str(*c_lists)
+        call_str = "%s + merge(%s)" % (merged_str, arg_str)
+        print(self._lin_stack[-1], call_str)
+
+    def push_merge(self, head: type):
+        self._merge_stack[-1].append(head)
 
 displayer = Displayer()
 
 def linearise(c: type) -> list[type]:
-    displayer.push("linearise", [c])
-
     if len(c.__bases__) == 0:
-        tail = []
-    else:
-        tail = merge(
-            *[linearise(b) for b in c.__bases__],
-            [b for b in c.__bases__],
-        )
+        return [c]
 
-    displayer.pop([c] + tail)
+    displayer.push_linearise(c)
+
+    tail = merge(
+        *[linearise(b) for b in c.__bases__],
+        [b for b in c.__bases__],
+    )
+
+    displayer.pop_linearise([c] + tail)
     return [c] + tail
 
 def merge(*c_lists: list[type]) -> list[type]:
-    displayer.push("merge", *c_lists)
+    if len(c_lists) == 0:
+        return []
+
+    displayer.display_merge(*c_lists)
 
     tail_set = set(
         c
@@ -68,74 +91,48 @@ def merge(*c_lists: list[type]) -> list[type]:
         for c_list in pruned_c_lists
         if len(c_list) > 0
     ]
-    tail = merge(*pruned_c_lists) if (len(pruned_c_lists) > 0) else []
 
-    displayer.pop([head] + tail)
-    return [head] + tail
-
+    displayer.push_merge(head)
+    return [head] + merge(*pruned_c_lists)
 
 O = object
 class F(O): pass
 class E(O): pass
 class D(O): pass
 class C(D,F): pass
-# class B(D,E): pass
-class B(E,D): pass
+class B(D,E): pass
+# class B(E,D): pass
 class A(B,C): pass
 
 linearise(A)
 
-# linearise(A) = ...
-# | linearise(B) = ...
-# | | linearise(E) = ...
-# | | | linearise(O) = ...
-# | | | linearise(O) = O
-# | | | merge(O, O) = ...
-# | | | merge(O, O) = O
-# | | linearise(E) = EO
-# | | linearise(D) = ...
-# | | | linearise(O) = ...
-# | | | linearise(O) = O
-# | | | merge(O, O) = ...
-# | | | merge(O, O) = O
-# | | linearise(D) = DO
-# | | merge(EO, DO, ED) = ...
-# | | | merge(O, DO, D) = ...
-# | | | | merge(O, O) = ...
-# | | | | merge(O, O) = O
-# | | | merge(O, DO, D) = DO
-# | | merge(EO, DO, ED) = EDO
-# | linearise(B) = BEDO
-# | linearise(C) = ...
-# | | linearise(D) = ...
-# | | | linearise(O) = ...
-# | | | linearise(O) = O
-# | | | merge(O, O) = ...
-# | | | merge(O, O) = O
-# | | linearise(D) = DO
-# | | linearise(F) = ...
-# | | | linearise(O) = ...
-# | | | linearise(O) = O
-# | | | merge(O, O) = ...
-# | | | merge(O, O) = O
-# | | linearise(F) = FO
-# | | merge(DO, FO, DF) = ...
-# | | | merge(O, FO, F) = ...
-# | | | | merge(O, O) = ...
-# | | | | merge(O, O) = O
-# | | | merge(O, FO, F) = FO
-# | | merge(DO, FO, DF) = DFO
-# | linearise(C) = CDFO
-# | merge(BEDO, CDFO, BC) = ...
-# | | merge(EDO, CDFO, C) = ...
-# | | | merge(DO, CDFO, C) = ...
-# | | | | merge(DO, DFO) = ...
-# | | | | | merge(O, FO) = ...
-# | | | | | | merge(O, O) = ...
-# | | | | | | merge(O, O) = O
-# | | | | | merge(O, FO) = FO
-# | | | | merge(DO, DFO) = DFO
-# | | | merge(DO, CDFO, C) = CDFO
-# | | merge(EDO, CDFO, C) = ECDFO
-# | merge(BEDO, CDFO, BC) = BECDFO
-# linearise(A) = ABECDFO
+# L(A) = A + merge(L(B), L(C), BC)
+# |   L(B) = B + merge(L(D), L(E), DE)
+# |   |   L(D) = D + merge(L(O), O)
+# |   |   L(D) = D + merge(O, O)
+# |   |   L(D) = DO
+# |   |   L(E) = E + merge(L(O), O)
+# |   |   L(E) = E + merge(O, O)
+# |   |   L(E) = EO
+# |   L(B) = B + merge(DO, EO, DE)
+# |   L(B) = B + D + merge(O, EO, E)
+# |   L(B) = B + D + E + merge(O, O)
+# |   L(B) = BDEO
+# |   L(C) = C + merge(L(D), L(F), DF)
+# |   |   L(D) = D + merge(L(O), O)
+# |   |   L(D) = D + merge(O, O)
+# |   |   L(D) = DO
+# |   |   L(F) = F + merge(L(O), O)
+# |   |   L(F) = F + merge(O, O)
+# |   |   L(F) = FO
+# |   L(C) = C + merge(DO, FO, DF)
+# |   L(C) = C + D + merge(O, FO, F)
+# |   L(C) = C + D + F + merge(O, O)
+# |   L(C) = CDFO
+# L(A) = A + merge(BDEO, CDFO, BC)
+# L(A) = A + B + merge(DEO, CDFO, C)
+# L(A) = A + B + C + merge(DEO, DFO)
+# L(A) = A + B + C + D + merge(EO, FO)
+# L(A) = A + B + C + D + E + merge(O, FO)
+# L(A) = A + B + C + D + E + F + merge(O, O)
+# L(A) = ABCDEFO
