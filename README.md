@@ -9,6 +9,16 @@ python -m pip install -U pip
 python -m pip install -e .
 ```
 
+## Usage
+
+```python
+import mrovis as mv
+class C:
+    ...
+
+mv.linearise(C)
+```
+
 ## Examples
 
 See [scripts/example_1.py](scripts/example_1.py) and [scripts/example_2.py](scripts/example_2.py):
