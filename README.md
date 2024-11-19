@@ -1,5 +1,7 @@
 # mrovis
 
+This package performs VISualisation of the MRO (method-resolution order) computation in Python, as described in the documentation for the [Python Method Resolution Order](https://docs.python.org/3/howto/mro.html).
+
 ## Installation
 
 This package can be installed locally in "editable mode" with the following commands:

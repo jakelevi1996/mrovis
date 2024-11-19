@@ -1,5 +1,3 @@
-""" See https://docs.python.org/3/howto/mro.html """
-
 class _Displayer:
     def __init__(self):
         self.set_indent("|   ")
