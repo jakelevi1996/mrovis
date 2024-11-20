@@ -16,7 +16,7 @@ python -m pip install -e .
 ```python
 import mrovis as mv
 
-class C:
+class C(...):
     ...
 
 mv.linearise(C)
