@@ -24,10 +24,21 @@ mv.linearise(C)
 
 ## Examples
 
-See [scripts/example_1.py](scripts/example_1.py) and [scripts/example_2.py](scripts/example_2.py):
+These examples can also be found in [scripts/example_1.py](scripts/example_1.py) and [scripts/example_2.py](scripts/example_2.py):
 
-```
-python scripts/example_1.py
+```python
+import mrovis as mv
+
+class F: pass
+class E: pass
+class D: pass
+class C(D,F): pass
+class B(D,E): pass
+# class B(E,D): pass
+class A(B,C): pass
+
+mv.displayer.set_sep("")
+mv.linearise(A)
 ```
 
 ```
@@ -63,8 +74,19 @@ L(A) = A + B + C + D + E + F + merge(O, O)
 L(A) = A + B + C + D + E + F + O
 ```
 
-```
-python scripts/example_2.py
+```python
+import mrovis as mv
+
+class F: pass
+class E: pass
+class D: pass
+class C(D,F): pass
+# class B(D,E): pass
+class B(E,D): pass
+class A(B,C): pass
+
+mv.displayer.set_sep("")
+mv.linearise(A)
 ```
 
 ```
